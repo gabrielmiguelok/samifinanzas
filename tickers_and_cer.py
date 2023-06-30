@@ -3,6 +3,10 @@ from datetime import datetime
 import os
 import glob
 
+# Elimina archivos viejos que comienzan con 'precios_tickers_con_CER'
+for f in glob.glob('precios_tickers_con_CER_*.xlsx'):
+    os.remove(f)
+    
 # Encuentra el archivo .xlsx más reciente en el directorio
 file_list = glob.glob('ACTUALIZACION*.xlsx')
 recent_file = max(file_list, key=os.path.getctime)
