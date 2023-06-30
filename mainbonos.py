@@ -1,11 +1,18 @@
 import subprocess
 import time
+import os
+import glob
 
 # Lista de scripts a ejecutar en orden
 scripts = ['bonos.py', 'htmltxtbonos.py', 'pasarexcelbonos.py']
 
 for script in scripts:
     print(f"Ejecutando {script}...")
+
+    # Eliminar archivos viejos en el directorio 'output/'
+    files = glob.glob('ACTUALIZACION*.xlsx')
+    for f in files:
+        os.remove(f)
 
     # Crear el comando para ejecutar el script de Python
     command = ["python", script]
