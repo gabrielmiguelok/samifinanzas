@@ -2,10 +2,13 @@ import pandas as pd
 from datetime import datetime
 import os
 import glob
+import gspread
+from gspread_dataframe import set_with_dataframe
+from oauth2client.service_account import ServiceAccountCredentials
 
 # Elimina archivos viejos que comienzan con 'precios_tickers_con_CER'
-for f in glob.glob('precios_tickers_con_CER_*.xlsx'):
-    os.remove(f)
+# for f in glob.glob('precios_tickers_con_CER_*.xlsx'):
+#     os.remove(f)
     
 # Encuentra el archivo .xlsx más reciente en el directorio
 file_list = glob.glob('ACTUALIZACION*.xlsx')
@@ -25,11 +28,32 @@ df['CER'] = indice_cer
 now = datetime.now() 
 date_hour_str = now.strftime("%Y-%m-%d %H-%M-%S")
 
-# Crea el nombre del archivo con la fecha y hora
-nombre_archivo = f'precios_tickers_con_CER_{date_hour_str}.xlsx'
+# Define las credenciales de la API de Google Cloud
+scope = ['https://spreadsheets.google.com/feeds',
+        'https://www.googleapis.com/auth/drive']
 
-# Escribe el DataFrame modificado de nuevo a un archivo .xlsx
-df.to_excel(nombre_archivo, index=False)
+# Pon aquí el nombre de tu archivo de credenciales
+credentials = ServiceAccountCredentials.from_json_keyfile_name('C:/Users/Marti/Programs/samifinanzas/finanzassami.json', scope)
+
+# Autentica con las credenciales
+gc = gspread.authorize(credentials)
+
+# Crea el nombre del archivo
+nombre_archivo = f'precios_tickers_con_CER'
+
+# Intenta abrir el archivo existente
+try:
+    spreadsheet = gc.open(nombre_archivo)
+except gspread.SpreadsheetNotFound:
+    # Si el archivo no existe, crea un nuevo archivo
+    spreadsheet = gc.create(nombre_archivo)
+    # Comparte el archivo con el correo electrónico que desees
+    spreadsheet.share('pablou90@gmail.com', perm_type='user', role='writer')
+
+# Obtiene la primera hoja del archivo
+worksheet = spreadsheet.get_worksheet(0)
+
+# Escribe el DataFrame modificado de nuevo a la hoja de Google
+set_with_dataframe(worksheet, df)
 
 file.close()
-
