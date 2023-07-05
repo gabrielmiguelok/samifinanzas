@@ -5,10 +5,6 @@ import glob
 import gspread
 from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
-
-# Elimina archivos viejos que comienzan con 'precios_tickers_con_CER'
-# for f in glob.glob('precios_tickers_con_CER_*.xlsx'):
-#     os.remove(f)
     
 # Encuentra el archivo .xlsx más reciente en el directorio
 file_list = glob.glob('ACTUALIZACION*.xlsx')
