@@ -1,55 +1,70 @@
 import pandas as pd
-from datetime import datetime
 import os
 import glob
 import gspread
 from gspread_dataframe import set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
-    
-# Encuentra el archivo .xlsx más reciente en el directorio
-file_list = glob.glob('ACTUALIZACION*.xlsx')
-recent_file = max(file_list, key=os.path.getctime)
 
-# Carga el .xlsx con los tickers y precios
-df = pd.read_excel(recent_file)
+def load_emails():
+    """Carga los correos del archivo emails.txt"""
+    if os.path.exists('emails.txt'):
+        with open('emails.txt', 'r') as file:
+            return file.read().splitlines()
+    else:
+        return []
 
-# Carga el indice CER (suponiendo que es un número)
-file = open('CER ACTUALIZADO.log', 'r')
-indice_cer = file.read()
+def save_emails(emails):
+    """Guarda los correos en el archivo emails.txt"""
+    with open('emails.txt', 'w') as file:
+        for email in emails:
+            file.write(f'{email}\n')
 
-# Crea una nueva columna con el indice CER
-df['CER'] = indice_cer
+def manage_sharing(email, action, emails):
+    """Gestiona la compartición del archivo basándose en la acción proporcionada"""
+    if action.lower() == 'a':
+        if email not in emails:
+            spreadsheet.share(email, perm_type='user', role='writer')
+            emails.append(email)
+    elif action.lower() == 'q':
+        if email in emails:
+            spreadsheet.remove_permissions(email, role='writer')
+            emails.remove(email)
+    else:
+        print("Entrada no válida. Por favor, elige 'a' para agregar o 'q' para quitar.")
+    save_emails(emails)
 
-# Obtiene la fecha y hora actual, y formatea como una cadena
-now = datetime.now() 
-date_hour_str = now.strftime("%Y-%m-%d %H-%M-%S")
+# Carga la lista de correos
+shared_emails = load_emails()
 
-# Define las credenciales de la API de Google Cloud
-scope = ['https://spreadsheets.google.com/feeds',
-        'https://www.googleapis.com/auth/drive']
+# Encuentra el archivo .xlsx más reciente en el directorio y lo carga
+df = pd.read_excel(max(glob.glob('ACTUALIZACION*.xlsx'), key=os.path.getctime))
 
-# Pon aquí el nombre de tu archivo de credenciales
-credentials = ServiceAccountCredentials.from_json_keyfile_name('C:/Users/Marti/Programs/samifinanzas/finanzassami.json', scope)
+# Carga el indice CER y lo agrega al DataFrame
+with open('CER ACTUALIZADO.log', 'r') as file:
+    df['CER'] = file.read()
 
 # Autentica con las credenciales
+credentials = ServiceAccountCredentials.from_json_keyfile_name(
+    os.path.join(os.getcwd(), 'finanzassami.json'),
+    ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+)
+
 gc = gspread.authorize(credentials)
 
-# Crea el nombre del archivo
-nombre_archivo = f'precios_tickers_con_CER'
-
-# Intenta abrir el archivo existente
+# Intenta abrir el archivo existente, sino lo crea
 try:
-    spreadsheet = gc.open(nombre_archivo)
+    spreadsheet = gc.open('precios_tickers_con_CER')
 except gspread.SpreadsheetNotFound:
-    # Si el archivo no existe, crea un nuevo archivo
-    spreadsheet = gc.create(nombre_archivo)
-    # Comparte el archivo con el correo electrónico que desees
-    spreadsheet.share('pablou90@gmail.com', perm_type='user', role='writer')
+    spreadsheet = gc.create('precios_tickers_con_CER')
 
-# Obtiene la primera hoja del archivo
-worksheet = spreadsheet.get_worksheet(0)
+# Solicita al usuario que ingrese un correo electrónico y una acción
+email = input("Ingresa el correo electrónico con el que deseas compartir el archivo (presiona enter para omitir): ")
+if email:
+    manage_sharing(
+        email,
+        input("¿Quieres agregar (a) o quitar (q) este correo? "),
+        shared_emails
+    )
 
 # Escribe el DataFrame modificado de nuevo a la hoja de Google
-set_with_dataframe(worksheet, df)
-
-file.close()
+set_with_dataframe(spreadsheet.get_worksheet(0), df)
