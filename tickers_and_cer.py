@@ -23,15 +23,16 @@ def manage_sharing(email, action, emails):
     """Gestiona la compartición del archivo basándose en la acción proporcionada"""
     if action.lower() == 'a':
         if email not in emails:
-            spreadsheet.share(email, perm_type='user', role='writer')
+            spreadsheet.share(email, perm_type='user', role='reader', notify=False)
             emails.append(email)
+            save_emails(emails)
     elif action.lower() == 'q':
         if email in emails:
-            spreadsheet.remove_permissions(email, role='writer')
+            spreadsheet.remove_permissions(email, role='reader')
             emails.remove(email)
+            save_emails(emails)
     else:
         print("Entrada no válida. Por favor, elige 'a' para agregar o 'q' para quitar.")
-    save_emails(emails)
 
 # Carga la lista de correos
 shared_emails = load_emails()
@@ -39,9 +40,9 @@ shared_emails = load_emails()
 # Encuentra el archivo .xlsx más reciente en el directorio y lo carga
 df = pd.read_excel(max(glob.glob('ACTUALIZACION*.xlsx'), key=os.path.getctime))
 
-# Carga el indice CER y lo agrega al DataFrame
+# Carga el indice CER, lo convierte a un float y lo agrega al DataFrame
 with open('CER ACTUALIZADO.log', 'r') as file:
-    df['CER'] = file.read()
+    df['CER'] = float(file.read().replace(',', '.'))
 
 # Autentica con las credenciales
 credentials = ServiceAccountCredentials.from_json_keyfile_name(
@@ -65,6 +66,10 @@ if email:
         input("¿Quieres agregar (a) o quitar (q) este correo? "),
         shared_emails
     )
+
+# Comparte el archivo con los correos de la lista con permisos de solo lectura
+for email in shared_emails:
+    spreadsheet.share(email, perm_type='user', role='reader', notify=False)
 
 # Escribe el DataFrame modificado de nuevo a la hoja de Google
 set_with_dataframe(spreadsheet.get_worksheet(0), df)
