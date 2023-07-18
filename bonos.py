@@ -1,15 +1,20 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
 
+# Configura las opciones de Chrome
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+
 # Configura el driver de Selenium
 s=Service(ChromeDriverManager().install())
-driver = webdriver.Chrome(service=s)
+driver = webdriver.Chrome(service=s, options=chrome_options)
 
 # Define la URL de la página web
 url = 'https://www.rava.com/cotizaciones/bonos'
